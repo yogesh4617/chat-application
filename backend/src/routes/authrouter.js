@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.post("/signup", signup);
 
-router.post("/signin",  (req, res) => {
+router.get("/signin",  (req, res) => {
   return res.send("signin endpoint");
 });
 
