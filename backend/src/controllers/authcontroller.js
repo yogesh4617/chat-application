@@ -56,20 +56,85 @@ export const signup = async (req, res) => {
       });
 
       //send welcome email
-      try{
+      try {
         await sendWelcomeEmail(
           savedUser.fullName,
           savedUser.email,
-          process.env.WELCOME_EMAIL_LINK
+          process.env.WELCOME_EMAIL_LINK,
         );
-      }catch(error){
+      } catch (error) {
         console.log("error in sending welcome email", error);
       }
-
-
     }
   } catch (error) {
     console.log("error in signup controller", error);
+    res.status(500).json({ message: "internal server error" });
+  }
+};
+
+//login controller
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "all fields are required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "invalid credentials" });
+    }
+
+    const token = generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic,
+      token: token,
+    });
+  } catch (error) {
+    console.log("error in login controller", error);
+
+    res.status(500).json({ message: "internal server error" });
+  }
+};
+
+//isAuth controller
+export const isAuth = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ isAuth: false, message: "unauthorized" });
+    }
+
+    const user = await User.findById(req.user._id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ isAuth: false, message: "user not found" });
+    }
+
+    res.status(200).json({ isAuth: true, user });
+  } catch (error) {
+    console.log("error in isAuth controller", error);
+    res.status(500).json({ message: "internal server error" });
+  }
+};
+
+//logout controller
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("token");
+    res.status(200).json({ message: "logged out successfully" });
+  } catch (error) {
+    console.log("error in logout controller", error);
     res.status(500).json({ message: "internal server error" });
   }
 };
