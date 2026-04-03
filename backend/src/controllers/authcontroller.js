@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { generateToken } from "../configs/jwtUtils.js";
 import { sendWelcomeEmail } from "../Emails/emailHandler.js";
+import cloudinary from "../configs/cloudinary.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -99,7 +100,6 @@ export const login = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic,
-      token: token,
     });
   } catch (error) {
     console.log("error in login controller", error);
@@ -131,10 +131,39 @@ export const isAuth = async (req, res) => {
 //logout controller
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("token");
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "development" ? false : true,
+    });
     res.status(200).json({ message: "logged out successfully" });
   } catch (error) {
     console.log("error in logout controller", error);
+    res.status(500).json({ message: "internal server error" });
+  }
+};
+
+export const updateUserprofile = async (req, res) => {
+  try {
+    const { profilePic } = req.body;
+    if (!profilePic) {
+      return res.status(400).json({ message: "profile picture is required" });
+    }
+    const userId = req.user._id;
+    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: uploadResponse.secure_url },
+      { new: true },
+    ).select("-password");
+
+    res.status(200).json({
+      message: "profile picture updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.log("error in update profile controller", error);
     res.status(500).json({ message: "internal server error" });
   }
 };

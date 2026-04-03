@@ -1,4 +1,5 @@
 import express from "express";
+import cookieparser from "cookie-parser";
 import dotenv from "dotenv";
 import authRouter from "./routes/authrouter.js";
 import messageRouter from "./routes/messagerouter.js";
@@ -10,6 +11,7 @@ await connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
+app.use(cookieparser());
 
 app.use("/api/auth", authRouter);
 app.use("/api/message", messageRouter);
